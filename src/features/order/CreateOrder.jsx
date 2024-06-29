@@ -1,12 +1,12 @@
+import {useState} from "react";
 import {Form, redirect, useActionData, useNavigation} from "react-router-dom";
 import {createOrder} from "../../services/apiRestaurant.js";
 import Button from "../../ui/Button.jsx";
 import {useDispatch, useSelector} from "react-redux";
-import {getCart, getTotalCartPrice} from "../cart/cartSlice.js";
+import {clearCart, getCart, getTotalCartPrice} from "../cart/cartSlice.js";
 import EmptyCart from "../cart/EmptyCart.jsx";
 import store from "../../store.js";
 import {formatCurrency} from "../../utils/helpers.js";
-import {useState} from "react";
 import {fetchAddress} from "../users/userSlice.js";
 
 // https://uibakery.io/regex-library/phone-number
@@ -34,10 +34,10 @@ function CreateOrder() {
     <div className='px-4 py-6 '>
       <h2 className='text-xl font-semibold mb-8'>Ready to order? Let's go!</h2>
 
-      <Form method="POST" action="/order/new">
+      <Form method="POST">
         <div className='mb-5 flex gap-2 flex-col sm:flex-row sm:items-center'>
           <label className='sm:basis-40'>First Name</label>
-          <input defaultValue={username } type="text" name="customer" required className='input grow'/>
+          <input defaultValue={username} type="text" name="customer" required className='input grow'/>
         </div>
 
         <div className='mb-5 flex gap-2 flex-col sm:flex-row sm:items-center'>
@@ -52,14 +52,15 @@ function CreateOrder() {
           <label className='sm:basis-40'>Address</label>
           <div className='grow'>
             <input defaultValue={address} type="text" disabled={isLoadingAddress} name="address" required className='input w-full'/>
-            {address.status ==='error' && <p className='text-xs mt-2 text-red-700 bg-red-100 py-2 rounded-md'>{errorAddress}</p>}
+            {addressStatus ==='error' && <p className='text-xs mt-2 text-red-700 bg-red-100 py-2 rounded-md'>{errorAddress}</p>}
           </div>
-          <span className='absolute right-[3px] z-50 top-[3px] md:top-[5px] md:right-[5px]'>
+          {!position.latitude && !position.longitude && (
+              <span className='absolute right-[3px] z-50 top-[3px] md:top-[5px] md:right-[5px]'>
         <Button disabled={isLoadingAddress} type='small' onClick={(e) => {
           e.preventDefault()
           dispatch(fetchAddress())
         }}>Get position</Button>
-        </span>
+        </span>)}
           </div>
         <div className='mb-12 flex gap-5 items-center'>
           <input
@@ -73,8 +74,10 @@ function CreateOrder() {
         </div>
 
         <div>
-          <input type="hidden" name='cart' value={JSON.stringify((cart))}/>
-          <input type="hidden" name='position' value={position.longitude?`${position.latitude}, ${position.longitude}`:''}/>
+          <input type="hidden" name='cart' value={JSON.stringify(cart)}/>
+          <input type="hidden" name='position' value={position.longitude && position.latitude
+              ? `${position.latitude},${position.longitude}`
+              : ''}/>
           <Button type='primary' disabled={isSubmitting || isLoadingAddress} >{isSubmitting ? `Packing Order  `: `Order now for ${formatCurrency(totalPrice)}`}</Button>
         </div>
       </Form>
@@ -88,7 +91,7 @@ const formData=await  request.formData()
 
   const order={
   ...data,
-    cart:JSON.parse((data.cart)),
+    cart:JSON.parse(data.cart),
     priority:data.priority === 'true'
   }
 
